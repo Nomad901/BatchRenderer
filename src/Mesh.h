@@ -7,14 +7,19 @@
 #include "VBOLayout.h"
 #include "EBO.h"
 #include "Shader.h"
+#include "Texture2.h"
 
 class Mesh
 {
 public:
 	Mesh() = default;
-	
+	Mesh(const std::vector<Vertex>& pVertices,
+		 const std::vector<uint32_t>& pIndices,
+		 const std::vector<Texture2>& pTexture);
+
 	void init(const std::vector<Vertex>& pVertices,
-			  const std::vector<uint32_t>& pIndices);
+			  const std::vector<uint32_t>& pIndices, 
+			  const std::vector<Texture2>& pTexture);
 
 	void setModelMatrix(const glm::mat4& pModelMatrix);
 	void setViewMatrix(const glm::mat4& pViewMatrix);
@@ -25,9 +30,11 @@ public:
 
 	void setVertices(const std::vector<Vertex>& pVertices);
 	void setIndices(const std::vector<uint32_t>& pIndices);
+	void setTextures(const std::vector<Texture2>& pTextures);
 
 	std::vector<Vertex>& getVertices();
 	std::vector<uint32_t>& getIndices();
+	std::vector<Texture2>& getTextures();
 
 	glm::mat4 getModelMatrix() const noexcept;
 	glm::mat4 getViewMatrix() const noexcept;
@@ -42,11 +49,13 @@ public:
 	//
 	// pNameUniform - name for MVP uniform in shaders
 	//
-	void draw(std::string_view pNameUnifrom, Shader pShader);
+	void draw(std::string_view pNameUnifrom, Shader& pShader);
+	void drawForModels(Shader& pShader);
 
 private:
 	std::vector<Vertex> mVertices;
 	std::vector<uint32_t> mIndices; 
+	std::vector<Texture2> mTextures;
 
 	VAO mVAO;
 	VBO mVBO;
