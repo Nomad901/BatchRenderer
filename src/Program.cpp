@@ -43,32 +43,10 @@ Program::~Program()
 
 void Program::run()
 {
-	std::vector<Vertex> vertices =
-	{
-		{glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f), 0.0f},
-		{glm::vec3( 0.5f, -0.5f, 0.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f), 0.0f}, 
-		{glm::vec3( 0.5f,  0.5f, 0.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f), 0.0f}, 
-		{glm::vec3(-0.5f,  0.5f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f), 0.0f} 
-	};
-	std::vector<uint32_t> indices =
-	{
-		0, 1, 2,
-		2, 3, 0,
-	};
-	Mesh mMesh;
-	mMesh.init(vertices, indices);
-	
-	Shader shader;
 	std::string resourcePath = RESOURCES_PATH;
-	shader.init(resourcePath + "vert.glsl", resourcePath + "frag.glsl");
+	Shader shader(resourcePath + "vert.glsl", resourcePath + "frag.glsl");
 
-	glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f),
-								 glm::vec3(0.0f, 0.0f, 0.0f),
-								 glm::vec3(0.0f, 1.0f, 0.0f));
-
-	glm::mat4 model(1.0f);
-	glm::mat4 proj = glm::perspective(glm::radians(45.0f), float(mWindowWidth) / float(mWindowHeight), 0.1f, 1000.0f);
-	mMesh.setMVP(model, view, proj);
+	Model model(resourcePath + "Brick.obj");
 
 	SDL_Event event;
 	bool whiteScreen{ false };
@@ -95,7 +73,16 @@ void Program::run()
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		mMesh.draw("uMVP", shader);
+		shader.bind();
+
+		glm::mat4 proj = glm::perspective(glm::radians(45.0f), 1280.0f / 720.0f, 0.1f, 200.0f);
+		glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 modelMat = glm::mat4(1.0f);
+		modelMat = glm::translate(modelMat, glm::vec3(0.0f, 0.0f, 0.0f));
+		modelMat = glm::scale(modelMat, glm::vec3(1.0f, 1.0f, 1.0f));
+		glm::mat4 MVP = modelMat * view * proj;
+		shader.setMatrixUniform4fv("uMVP", MVP);
+		model.draw("uMVP", shader);
 
 		SDL_GL_SwapWindow(mWindow);
 	}
