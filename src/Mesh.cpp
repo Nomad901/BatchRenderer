@@ -97,7 +97,7 @@ VBOLayout Mesh::getVBOLayout() const noexcept
 	return mVBOLayout;
 }
 
-void Mesh::draw(std::string_view pNameUniform, Shader pShader)
+void Mesh::draw(std::string_view pNameUniform, Shader& pShader)
 {
 	pShader.bind();
 	pShader.setMatrixUniform4fv(pNameUniform, getMVP());
