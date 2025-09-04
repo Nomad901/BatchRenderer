@@ -6,11 +6,9 @@ flat in float fragTexId;
 
 out vec4 finalColor;
 
-uniform sampler2D uTexture[2];
+uniform sampler2D texture_diffuse1;
 
 void main()
 {
-//	int index = int(fragTexId);
-//	finalColor = texture(uTexture[index], fragPosTex);
-	finalColor = fragColor;
+	finalColor = texture(texture_diffuse1, fragPosTex);
 }
