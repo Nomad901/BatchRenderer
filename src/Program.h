@@ -3,9 +3,12 @@
 #include <format>
 
 #include "glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 #include "SDL3/SDL.h"
 #include "glad/glad.h"
 
+#include "Mesh.h"
+#include "Shader.h"
 
 class Program
 {
@@ -14,11 +17,19 @@ public:
 	~Program();
 
 	void run();
-
+	
 private:
+	static void debugOutput(GLenum source,
+							GLenum type,
+							GLuint id,
+							GLenum severity,
+							GLsizei length,
+							const GLchar* message,
+							const void* userParam);
+private:
+	bool mProgIsRunning{ true };
 	uint32_t mWindowWidth, mWindowHeight;
 	SDL_Window* mWindow;
 	SDL_GLContext mContext;
 
 };
-
