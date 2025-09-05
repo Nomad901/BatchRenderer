@@ -48,6 +48,7 @@ void Program::run()
 
 	Model model(resourcePath + "Brick.obj");
 
+	float r = -1.0f;
 	SDL_Event event;
 	bool whiteScreen{ false };
 	while (mProgIsRunning)
@@ -64,19 +65,23 @@ void Program::run()
 				whiteScreen = true;
 			if (event.key.key == SDLK_B)
 				whiteScreen = false;
-
+			if (event.key.key == SDLK_P)
+				r += 0.2f;
+			if (event.key.key == SDLK_M)
+				r -= 0.2f;
 		}
+		glEnable(GL_DEPTH_TEST);
 		glViewport(0, 0, mWindowWidth, mWindowHeight);
 		if (whiteScreen)
 			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		else
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+		
 		shader.bind();
 
 		glm::mat4 proj = glm::perspective(glm::radians(45.0f), 1280.0f / 720.0f, 0.1f, 200.0f);
-		glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, r), glm::vec3(0.0f, 1.0f, 0.0f));
 		glm::mat4 modelMat = glm::mat4(1.0f);
 		modelMat = glm::translate(modelMat, glm::vec3(0.0f, 0.0f, 0.0f));
 		modelMat = glm::scale(modelMat, glm::vec3(1.0f, 1.0f, 1.0f));
