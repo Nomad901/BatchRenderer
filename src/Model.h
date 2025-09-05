@@ -6,9 +6,10 @@
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
+#include "stb_image.h"
 
 #include "Mesh.h"
-#include "Texture2.h"
+//#include "Texture2.h"
 
 class Model
 {
@@ -23,12 +24,15 @@ private:
 	void loadModel(const std::filesystem::path& pPath);
 	void processNode(aiNode* pNode, const aiScene* pScene);
 	void processMesh(aiMesh* pMesh, const aiScene* pScene);
-	void loadMaterialTextures(std::vector<Texture2>& pStrgToChange, aiMaterial* pMaterial, 
+	void loadMaterialTextures(std::vector<Texture>& pStrgToChange, aiMaterial* pMaterial,
 							  aiTextureType pTexType, std::string pTypeName);
+	uint32_t textureFromFile(std::string_view pFileName,
+							 const std::filesystem::path& pPath,
+							 bool gamma);
 
 private:
 	std::vector<Mesh> mMeshes;
-	std::vector<Texture2> mTexturesLoaded;
+	std::vector<Texture> mTexturesLoaded;
 	std::filesystem::path mDirectory;
 };
 
