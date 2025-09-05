@@ -1,15 +1,17 @@
-#version 410
+#version 440
 
 layout(location = 0) in vec3 pos;
-layout(location = 1) in vec4 color;
-layout(location = 2) in vec2 posTex;
-layout(location = 3) in float texID;
+layout(location = 1) in vec3 normals;
+layout(location = 2) in vec4 color;
+layout(location = 3) in vec2 posTex;
 
+out vec3 fragPos;
 out vec4 fragColor;
 out vec2 fragPosTex;
-flat out float fragTexId;
+out vec3 fragNormals;
 
 uniform mat4 uMVP;
+uniform mat4 uModel;
 
 void main()
 {
@@ -17,6 +19,7 @@ void main()
 
 	fragColor = color;
 	fragPosTex = posTex;
-	fragTexId = texID;
+	fragNormals = mat3(uModel) * normals;
+	fragPos = pos;
 }
 
