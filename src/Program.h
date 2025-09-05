@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <format>
+#include <unordered_map>
 
 #include "glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -9,6 +10,8 @@
 
 #include "Mesh.h"
 #include "Shader.h"
+#include "Model.h"
+#include "Camera.h"
 
 class Program
 {
