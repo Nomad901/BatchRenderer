@@ -37,6 +37,8 @@ void Model::processNode(aiNode* pNode, const aiScene* pScene)
 	for (uint32_t i = 0; i < pNode->mNumMeshes; ++i)
 	{
 		aiMesh* mesh = pScene->mMeshes[pNode->mMeshes[i]];
+		if (!mesh)
+			std::cout << "Mesh is wrong in process node!\n";
 	 	processMesh(mesh, pScene);
 	}
 	for (uint32_t i = 0; i < pNode->mNumChildren; ++i)
@@ -51,7 +53,7 @@ void Model::processMesh(aiMesh* pMesh, const aiScene* pScene)
 	vertices.reserve(100);
 	std::vector<uint32_t> indices; 
 	indices.resize(100);
-	std::vector<Texture2> textures;
+	std::vector<Texture> textures;
 	textures.reserve(100);
 
 	for (uint32_t i = 0; i < pMesh->mNumVertices; ++i)
@@ -102,18 +104,24 @@ void Model::processMesh(aiMesh* pMesh, const aiScene* pScene)
 	if (pMesh->mMaterialIndex >= 0)
 	{
 		aiMaterial* material = pScene->mMaterials[pMesh->mMaterialIndex];
-		std::vector<Texture2> diffuseMaterial;
+		std::vector<Texture> diffuseMaterial;
 		loadMaterialTextures(diffuseMaterial, material, aiTextureType_DIFFUSE, "texture_diffuse");
 		textures.insert(textures.end(), diffuseMaterial.begin(), diffuseMaterial.end());
-		std::vector<Texture2> specularMaterial;
+		std::vector<Texture> specularMaterial;
 		loadMaterialTextures(specularMaterial, material, aiTextureType_SPECULAR, "texture_specular");
 		textures.insert(textures.end(), specularMaterial.begin(), specularMaterial.end());
+		//std::vector<Texture> normalMaterial;
+		//loadMaterialTextures(normalMaterial, material, aiTextureType_AMBIENT, "texture_normal");
+		//textures.insert(textures.end(), normalMaterial.begin(), normalMaterial.end());
+		//std::vector<Texture> heightMaterial;
+		//loadMaterialTextures(heightMaterial, material, aiTextureType_HEIGHT, "texture_height");
+		//textures.insert(textures.end(), heightMaterial.begin(), heightMaterial.end());
 	}
 
 	mMeshes.emplace_back(vertices, indices, std::move(textures));
 }
 
-void Model::loadMaterialTextures(std::vector<Texture2>& pStrgToChange, aiMaterial* pMaterial, 
+void Model::loadMaterialTextures(std::vector<Texture>& pStrgToChange, aiMaterial* pMaterial,
 								 aiTextureType pTexType, std::string pTypeName)
 {
 	for (uint32_t i = 0; i < pMaterial->GetTextureCount(pTexType); ++i)
@@ -123,7 +131,7 @@ void Model::loadMaterialTextures(std::vector<Texture2>& pStrgToChange, aiMateria
 		bool skip = false;
 		for (uint32_t j = 0; j < mTexturesLoaded.size(); ++j)
 		{
-			if (std::strcmp(mTexturesLoaded[j].getPath().string().data(), string.C_Str()) == 0)
+			if (std::strcmp(mTexturesLoaded[j].mPath.string().data(), string.C_Str()) == 0)
 			{
 				pStrgToChange.emplace_back(mTexturesLoaded[j]);
 				skip = true;
@@ -132,13 +140,63 @@ void Model::loadMaterialTextures(std::vector<Texture2>& pStrgToChange, aiMateria
 		}
 		if (!skip)
 		{
-			Texture2 texture;
-			std::string fileName = string.C_Str();
-			fileName = mDirectory.string() + "/" + fileName;
-			texture.init(fileName, "");
-			texture.setType(pTypeName);
-			texture.setPath(string.C_Str());
-			pStrgToChange.emplace_back(std::move(texture));
+			Texture texture;
+			texture.mID = textureFromFile(string.C_Str(), mDirectory, false);
+			texture.mType = pTypeName;
+			texture.mPath = string.C_Str();
+			pStrgToChange.push_back(texture);
+			mTexturesLoaded.push_back(texture);
 		}
 	}
 }
+
+uint32_t Model::textureFromFile(std::string_view pFileName, 
+								const std::filesystem::path& pPath, 
+								bool gamma)
+{
+	std::string filename;
+	std::filesystem::path fileNamePath = pFileName;
+	
+	if (fileNamePath.is_absolute())
+		filename = pFileName;
+	else
+		filename = pPath.string() + '/' + std::string(pFileName);
+
+	uint32_t id;
+	glGenTextures(1, &id);
+
+	stbi_set_flip_vertically_on_load(true);
+
+	int32_t width, height, BPP;
+	uint8_t* data = stbi_load(filename.c_str(), &width, &height, &BPP, 0);
+	if (!data)
+	{
+		std::cout << "Couldnt load the image-texture!\n";
+		stbi_image_free(data);
+		return 0;
+	}
+
+	GLenum format{};
+	if (BPP == 1)
+		format = GL_RED;
+	else if (BPP == 3)
+		format = GL_RGB;
+	else if (BPP == 4)
+		format = GL_RGBA;
+
+	glBindTexture(GL_TEXTURE_2D, id);	
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	if (data)
+		stbi_image_free(data);
+	
+	return id;
+}
+	
