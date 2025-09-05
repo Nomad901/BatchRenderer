@@ -46,11 +46,34 @@ void Program::run()
 	std::string resourcePath = RESOURCES_PATH;
 	Shader shader(resourcePath + "vert.glsl", resourcePath + "frag.glsl");
 
-	Model model(resourcePath + "Brick.obj");
+	Camera camera;
+	//Model model(resourcePath + "Brick.obj");
+
+	std::vector<Vertex> vertices =
+	{
+		{glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
+		{glm::vec3(0.5f, -0.5f, 0.0f),  glm::vec3(0.0f, 0.0f, -1.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
+		{glm::vec3(0.5f,  0.5f, 0.0f),  glm::vec3(0.0f, 0.0f, -1.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f)},
+		{glm::vec3(-0.5f,  0.5f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f)}
+	};
+	std::vector<uint32_t> indices =
+	{
+		0, 1, 2,
+		2, 3, 0,
+		4, 5, 6,
+		6, 7, 4
+	};
+	Texture2 texture;
+	texture.init(resourcePath + "broken_brick_wall_diff_1k.jpg", "texture2");
+	Mesh mesh(vertices, indices, {});
+
+	Material material(glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f), texture.getID(), texture.getID());
 
 	float r = -1.0f;
+	std::unordered_map<SDL_Keycode, bool> keyCodes;
 	SDL_Event event;
 	bool whiteScreen{ false };
+	bool takeCursor{ true };
 	while (mProgIsRunning)
 	{
 		while (SDL_PollEvent(&event))
@@ -61,15 +84,48 @@ void Program::run()
 				mProgIsRunning = false;
 				break;
 			}
-			if (event.key.key == SDLK_V)
-				whiteScreen = true;
-			if (event.key.key == SDLK_B)
-				whiteScreen = false;
-			if (event.key.key == SDLK_P)
-				r += 0.2f;
-			if (event.key.key == SDLK_M)
-				r -= 0.2f;
+			if (event.type == SDL_EVENT_KEY_DOWN)
+				keyCodes[event.key.key] = true;
+			if (event.type == SDL_EVENT_KEY_UP)
+				keyCodes[event.key.key] = false;
+			if (event.type == SDL_EVENT_MOUSE_MOTION &&
+				takeCursor)
+				camera.mouseMovement(glm::vec2(event.motion.xrel / 5, event.motion.yrel / 5));
 		}
+
+		if (keyCodes[SDLK_V])
+			whiteScreen = true;
+		if (keyCodes[SDLK_B])
+			whiteScreen = false;
+
+		float speedCamera = 0.05f;
+		if (keyCodes[SDLK_LSHIFT])
+			speedCamera = 0.1f;
+		if (keyCodes[SDLK_W])
+			camera.moveForward(speedCamera);
+		if (keyCodes[SDLK_S])
+			camera.moveBackward(speedCamera);
+		if (keyCodes[SDLK_A])
+			camera.moveLeft(speedCamera);
+		if (keyCodes[SDLK_D])
+			camera.moveRight(speedCamera);
+
+		if (keyCodes[SDLK_Z])
+			takeCursor = !takeCursor;
+
+		if (keyCodes[SDLK_LEFT])
+			r -= 0.4f;
+		if (keyCodes[SDLK_RIGHT])
+			r += 0.4f;
+
+		if (takeCursor)
+		{
+			SDL_WarpMouseInWindow(mWindow, mWindowWidth / 2, mWindowHeight / 2);
+			SDL_SetWindowRelativeMouseMode(mWindow, true);
+		}
+		else
+			SDL_SetWindowRelativeMouseMode(mWindow, false);
+
 		glEnable(GL_DEPTH_TEST);
 		glViewport(0, 0, mWindowWidth, mWindowHeight);
 		if (whiteScreen)
@@ -78,16 +134,32 @@ void Program::run()
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
+		texture.bind();
 		shader.bind();
 
-		glm::mat4 proj = glm::perspective(glm::radians(45.0f), 1280.0f / 720.0f, 0.1f, 200.0f);
-		glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, r), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::vec3 lightPos(0.0f, 0.0f, 2.0f);
+	
+		shader.setUniform3fv("lightPos0", lightPos);
+		shader.setUniform3fv("cameraPos", camera.getPos());
+		material.sendToShader(shader);
+
+		glm::mat4 proj = glm::mat4(1.0f);
+		glm::mat4 view = glm::mat4(1.0f);
 		glm::mat4 modelMat = glm::mat4(1.0f);
-		modelMat = glm::translate(modelMat, glm::vec3(0.0f, 0.0f, 0.0f));
+		glm::mat4 MVP = glm::mat4(1.0f);
+
+		proj = glm::perspective(glm::radians(45.0f), 1280.0f / 720.0f, 0.1f, 200.0f);
+		view = camera.getViewMatrix();
+		modelMat = glm::translate(modelMat, glm::vec3(0.0f, 0.0f, -3.0f));
+		modelMat = glm::rotate(modelMat, glm::radians(r), glm::vec3(0.0f, 1.0f, 0.0f));
 		modelMat = glm::scale(modelMat, glm::vec3(1.0f, 1.0f, 1.0f));
-		glm::mat4 MVP = modelMat * view * proj;
+		MVP = proj * view * modelMat;
+		
+		shader.setMatrixUniform4fv("uModel", modelMat);
 		shader.setMatrixUniform4fv("uMVP", MVP);
-		model.draw("uMVP", shader);
+		//model.draw("uMVP", shader);
+		mesh.draw();
+		//mesh.drawForModels(shader);
 
 		SDL_GL_SwapWindow(mWindow);
 	}
