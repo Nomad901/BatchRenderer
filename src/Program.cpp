@@ -51,10 +51,10 @@ void Program::run()
 
 	std::vector<Vertex> vertices =
 	{
-		{glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
-		{glm::vec3(0.5f, -0.5f, 0.0f),  glm::vec3(0.0f, 0.0f, -1.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
-		{glm::vec3(0.5f,  0.5f, 0.0f),  glm::vec3(0.0f, 0.0f, -1.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f)},
-		{glm::vec3(-0.5f,  0.5f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f)}
+		{glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
+		{glm::vec3(0.5f, -0.5f, 0.0f),  glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
+		{glm::vec3(0.5f,  0.5f, 0.0f),  glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f)},
+		{glm::vec3(-0.5f,  0.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f)}
 	};
 	std::vector<uint32_t> indices =
 	{
@@ -65,9 +65,16 @@ void Program::run()
 	};
 	Texture2 texture;
 	texture.init(resourcePath + "broken_brick_wall_diff_1k.jpg", "texture2");
-	Mesh mesh(vertices, indices, {});
+	std::vector<Texture2> textures; 
+	textures.reserve(32);
+	textures.push_back(texture);
 
-	Material material(glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f), texture.getID(), texture.getID());
+	Mesh mesh(vertices, indices, textures);
+	mesh.initMVP(mWindowWidth, mWindowHeight, camera.getViewMatrix(), 
+				 glm::vec3(1.0f, 1.0f, 1.0f), std::make_pair(45.0f, glm::vec3(0.0f, 1.0f, 0.0f)), 
+																	glm::vec3(0.0f, 0.0f, -3.0f));
+
+	Material material(glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f), { int32_t(texture.getID()) });
 
 	float r = -1.0f;
 	std::unordered_map<SDL_Keycode, bool> keyCodes;
@@ -134,7 +141,6 @@ void Program::run()
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		texture.bind();
 		shader.bind();
 
 		glm::vec3 lightPos(0.0f, 0.0f, 2.0f);
@@ -142,24 +148,13 @@ void Program::run()
 		shader.setUniform3fv("lightPos0", lightPos);
 		shader.setUniform3fv("cameraPos", camera.getPos());
 		material.sendToShader(shader);
-
-		glm::mat4 proj = glm::mat4(1.0f);
-		glm::mat4 view = glm::mat4(1.0f);
-		glm::mat4 modelMat = glm::mat4(1.0f);
-		glm::mat4 MVP = glm::mat4(1.0f);
-
-		proj = glm::perspective(glm::radians(45.0f), 1280.0f / 720.0f, 0.1f, 200.0f);
-		view = camera.getViewMatrix();
-		modelMat = glm::translate(modelMat, glm::vec3(0.0f, 0.0f, -3.0f));
-		modelMat = glm::rotate(modelMat, glm::radians(r), glm::vec3(0.0f, 1.0f, 0.0f));
-		modelMat = glm::scale(modelMat, glm::vec3(1.0f, 1.0f, 1.0f));
-		MVP = proj * view * modelMat;
+	
+		mesh.setViewMatrix(camera.getViewMatrix());
 		
-		shader.setMatrixUniform4fv("uModel", modelMat);
-		shader.setMatrixUniform4fv("uMVP", MVP);
-		//model.draw("uMVP", shader);
+		shader.setMatrixUniform4fv("uModel", mesh.getModelMatrix());
+		shader.setMatrixUniform4fv("uMVP", mesh.getMVP());
+
 		mesh.draw();
-		//mesh.drawForModels(shader);
 
 		SDL_GL_SwapWindow(mWindow);
 	}
